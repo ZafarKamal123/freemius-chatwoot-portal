@@ -9,7 +9,7 @@ import {
   handleApiError,
   sendJson,
   sendNoContent,
-} from './_response.ts'
+} from '../server/apiResponse.ts'
 
 export default async function handler(
   request: ApiRequest,
@@ -26,7 +26,7 @@ export default async function handler(
       return
     }
 
-    assertAccessAllowed(request.headers, process.env)
+    assertAccessAllowed(request.headers ?? {}, process.env)
 
     const body = readBody(request.body)
     const link = await createFreemiusPortalLink(body, process.env)

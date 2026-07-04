@@ -1,27 +1,65 @@
-import { assertAccessAllowed } from '../server/freemiusPortalCore.ts'
-import {
-  type ApiRequest,
-  type ApiResponse,
-  handleApiError,
-  sendJson,
-  sendNoContent,
-} from './_response.ts'
+import { timingSafeEqual } from 'node:crypto'
+import { type ApiRequest, type ApiResponse } from '../server/apiResponse.ts'
 
 export default function handler(request: ApiRequest, response: ApiResponse) {
   try {
+    response.setHeader('Cache-Control', 'no-store')
+
     if (request.method === 'OPTIONS') {
-      sendNoContent(response, 'GET, OPTIONS')
+      response.setHeader('Allow', 'GET, OPTIONS')
+      response.status(204).end()
       return
     }
 
     if (request.method !== 'GET') {
-      sendJson(response, 405, { error: 'Use GET to check dashboard authorization.' })
+      response
+        .status(405)
+        .json({ error: 'Use GET to check dashboard authorization.' })
       return
     }
 
-    assertAccessAllowed(request.headers, process.env)
-    sendJson(response, 200, { authorized: true })
+    const configuredToken = process.env.PORTAL_ACCESS_TOKEN?.trim()
+
+    if (!configuredToken) {
+      response.status(200).json({ authorized: true })
+      return
+    }
+
+    const requestToken = readHeader(request.headers ?? {}, 'x-portal-access-token')
+
+    if (!requestToken || !tokensMatch(requestToken, configuredToken)) {
+      response.status(401).json({ error: 'This dashboard app is not authorized.' })
+      return
+    }
+
+    response.status(200).json({ authorized: true })
   } catch (error) {
-    handleApiError(error, response)
+    console.error('Unexpected auth-status API error', error)
+    response.status(500).json({ error: 'Unexpected server error.' })
   }
+}
+
+function readHeader(
+  headers: Record<string, string | string[] | undefined>,
+  name: string,
+) {
+  const lowerName = name.toLowerCase()
+  const matchedKey = Object.keys(headers).find((key) => key.toLowerCase() === lowerName)
+  const value = matchedKey ? headers[matchedKey] : undefined
+
+  if (Array.isArray(value)) {
+    return value[0]?.trim() ?? ''
+  }
+
+  return value?.trim() ?? ''
+}
+
+function tokensMatch(received: string, expected: string) {
+  const receivedBuffer = Buffer.from(received)
+  const expectedBuffer = Buffer.from(expected)
+
+  return (
+    receivedBuffer.length === expectedBuffer.length &&
+    timingSafeEqual(receivedBuffer, expectedBuffer)
+  )
 }

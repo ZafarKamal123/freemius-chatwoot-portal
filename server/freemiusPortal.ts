@@ -128,11 +128,42 @@ function handleRouteError(error: unknown, res: ServerResponse) {
     return
   }
 
-  if (error instanceof HttpError) {
-    sendJson(res, error.statusCode, { error: error.message })
+  const statusCode = readErrorStatusCode(error)
+  const message = readErrorMessage(error)
+
+  if (statusCode) {
+    sendJson(res, statusCode, { error: message })
     return
   }
 
   console.error('Unexpected portal route error', error)
   sendJson(res, 500, { error: 'Unexpected server error.' })
+}
+
+function readErrorStatusCode(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return null
+  }
+
+  const statusCode = (error as { statusCode?: unknown }).statusCode
+
+  if (
+    typeof statusCode === 'number' &&
+    Number.isInteger(statusCode) &&
+    statusCode >= 400 &&
+    statusCode < 600
+  ) {
+    return statusCode
+  }
+
+  return null
+}
+
+function readErrorMessage(error: unknown) {
+  if (typeof error !== 'object' || error === null) {
+    return 'Unexpected server error.'
+  }
+
+  const message = (error as { message?: unknown }).message
+  return typeof message === 'string' ? message : 'Unexpected server error.'
 }
