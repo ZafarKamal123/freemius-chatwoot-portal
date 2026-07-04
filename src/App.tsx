@@ -23,6 +23,7 @@ const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const emailParamNames = ['email', 'customer_email', 'contact_email']
 const productParamNames = ['product_id', 'productId', 'product']
 const accessTokenParamNames = ['access_token', 'token']
+const accessTokenStorageKey = 'chatwoot-freemius-access-token'
 
 function isValidEmail(value: string) {
   return value.length <= 254 && emailPattern.test(value)
@@ -59,6 +60,30 @@ function removeAccessTokenFromUrl() {
       '',
       `${url.pathname}${url.search}${url.hash}`,
     )
+  }
+}
+
+function readStoredAccessToken() {
+  try {
+    return window.sessionStorage.getItem(accessTokenStorageKey)?.trim() ?? ''
+  } catch {
+    return ''
+  }
+}
+
+function storeAccessToken(accessToken: string) {
+  try {
+    window.sessionStorage.setItem(accessTokenStorageKey, accessToken)
+  } catch {
+    // Authorization still works for this load if sessionStorage is unavailable.
+  }
+}
+
+function clearStoredAccessToken() {
+  try {
+    window.sessionStorage.removeItem(accessTokenStorageKey)
+  } catch {
+    // Nothing to clear if browser storage is unavailable.
   }
 }
 
@@ -130,8 +155,19 @@ function readInitialProductId() {
   return isFreemiusProductId(productId) ? productId : defaultFreemiusProductId
 }
 
+function readInitialAccessToken() {
+  const queryAccessToken = readSearchParam(accessTokenParamNames)
+
+  if (queryAccessToken) {
+    storeAccessToken(queryAccessToken)
+    return queryAccessToken
+  }
+
+  return readStoredAccessToken()
+}
+
 function App() {
-  const [accessToken] = useState(() => readSearchParam(accessTokenParamNames))
+  const [accessToken] = useState(readInitialAccessToken)
   const [email, setEmail] = useState(() => readSearchParam(emailParamNames))
   const [productId, setProductId] = useState(readInitialProductId)
   const [authStatus, setAuthStatus] = useState<AuthStatus>('checking')
@@ -175,6 +211,7 @@ function App() {
         if (!response.ok) {
           setAuthStatus('unauthorized')
           setAuthMessage(data?.error ?? 'This dashboard app is not authorized.')
+          clearStoredAccessToken()
           return
         }
 
@@ -251,6 +288,7 @@ function App() {
         if (response.status === 401) {
           setAuthStatus('unauthorized')
           setAuthMessage(data?.error ?? 'This dashboard app is not authorized.')
+          clearStoredAccessToken()
           setPortalUrl('')
           return
         }

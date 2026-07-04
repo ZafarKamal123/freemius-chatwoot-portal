@@ -49,7 +49,7 @@ When `PORTAL_ACCESS_TOKEN` is set, register the Chatwoot dashboard app URL with 
 https://your-app.example.com/?access_token=choose-a-long-random-token
 ```
 
-The React app removes the token from the visible URL after loading and sends it only as the `X-Portal-Access-Token` header.
+The React app stores the token in `sessionStorage`, removes it from the visible URL after loading, and sends it only as the `X-Portal-Access-Token` header.
 The UI stays locked until `/api/auth-status` verifies the token, so the email/product form is not rendered for unauthorized visitors.
 
 To send customers to a specific Freemius portal section, set a store path:
