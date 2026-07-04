@@ -1,0 +1,160 @@
+.app-shell {
+  min-height: 100svh;
+  display: grid;
+  place-items: center;
+  padding: 28px;
+  background: var(--canvas);
+  box-sizing: border-box;
+}
+
+.portal-panel {
+  width: min(100%, 440px);
+  padding: 28px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 20px 48px rgba(15, 23, 42, 0.08);
+  text-align: left;
+  box-sizing: border-box;
+}
+
+.panel-header {
+  display: grid;
+  gap: 14px;
+  margin-bottom: 28px;
+}
+
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--primary);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: inline-grid;
+  place-items: center;
+  color: #ffffff;
+  background: var(--primary);
+  box-shadow: 0 8px 18px rgba(39, 129, 246, 0.22);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.portal-form {
+  display: grid;
+  gap: 12px;
+}
+
+.portal-form label {
+  color: var(--ink);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.portal-form input,
+.portal-form select {
+  width: 100%;
+  min-height: 48px;
+  padding: 0 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  color: var(--ink);
+  background: var(--surface);
+  font: inherit;
+  box-sizing: border-box;
+}
+
+.portal-form input::placeholder {
+  color: var(--muted-soft);
+}
+
+.portal-form select {
+  appearance: auto;
+}
+
+.portal-form input:focus,
+.portal-form select:focus {
+  border-color: var(--primary);
+  outline: 3px solid var(--focus-ring);
+}
+
+.portal-form button,
+.portal-link {
+  min-height: 48px;
+  border: 0;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 18px;
+  color: #ffffff;
+  background: var(--primary);
+  font: inherit;
+  font-weight: 800;
+  text-decoration: none;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.portal-form button:hover,
+.portal-link:hover {
+  background: var(--primary-hover);
+}
+
+.portal-form button:focus-visible,
+.portal-link:focus-visible {
+  outline: 3px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
+.portal-form button:active,
+.portal-link:active {
+  transform: translateY(1px);
+}
+
+.portal-form button:disabled {
+  color: var(--muted);
+  background: var(--disabled);
+  cursor: not-allowed;
+  transform: none;
+}
+
+.status-line {
+  min-height: 22px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.status-line.error {
+  color: var(--danger);
+}
+
+.status-line.success {
+  color: var(--success);
+}
+
+.portal-link {
+  width: 100%;
+  margin-top: 16px;
+  box-sizing: border-box;
+}
+
+@media (max-width: 520px) {
+  .app-shell {
+    padding: 16px;
+    align-items: start;
+  }
+
+  .portal-panel {
+    padding: 22px;
+  }
+}
