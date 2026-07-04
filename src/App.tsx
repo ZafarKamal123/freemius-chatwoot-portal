@@ -185,10 +185,10 @@ function App() {
     status !== 'loading'
 
   useEffect(() => {
-    if (accessToken) {
+    if (isAuthorized && accessToken) {
       removeAccessTokenFromUrl()
     }
-  }, [accessToken])
+  }, [accessToken, isAuthorized])
 
   useEffect(() => {
     let isMounted = true

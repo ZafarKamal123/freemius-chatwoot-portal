@@ -74,4 +74,9 @@ npm run build
 npm run preview
 ```
 
-The `/api/generate-magic-link` route is wired into Vite dev and preview. For production, deploy the app behind a Node-compatible host or move `server/freemiusPortal.ts` into your platform's serverless route layer so Freemius credentials stay server-side.
+The `/api/generate-magic-link` and `/api/auth-status` routes are available in two places:
+
+- Local Vite dev/preview uses `server/freemiusPortal.ts` middleware.
+- Vercel production uses the serverless functions in `api/`.
+
+Keep all Freemius bearer tokens and `PORTAL_ACCESS_TOKEN` in Vercel environment variables.
