@@ -29,17 +29,47 @@ export function freemiusPortalMiddleware(env: EnvSource = process.env) {
   ) => {
     const requestUrl = new URL(req.url ?? '/', 'http://localhost')
 
-    if (requestUrl.pathname !== '/api/generate-magic-link') {
+    if (
+      requestUrl.pathname !== '/api/generate-magic-link' &&
+      requestUrl.pathname !== '/api/auth-status'
+    ) {
       next()
       return
     }
 
     try {
+      if (requestUrl.pathname === '/api/auth-status') {
+        handleAuthStatus(req, res, env)
+        return
+      }
+
       await handleGenerateMagicLink(req, res, env)
     } catch (error) {
       handleRouteError(error, res)
     }
   }
+}
+
+function handleAuthStatus(
+  req: IncomingMessage,
+  res: ServerResponse,
+  env: EnvSource,
+) {
+  if (req.method === 'OPTIONS') {
+    res.writeHead(204, {
+      Allow: 'GET, OPTIONS',
+      'Cache-Control': 'no-store',
+    })
+    res.end()
+    return
+  }
+
+  if (req.method !== 'GET') {
+    throw new HttpError(405, 'Use GET to check dashboard authorization.')
+  }
+
+  assertAccessAllowed(req, env)
+  sendJson(res, 200, { authorized: true })
 }
 
 async function handleGenerateMagicLink(

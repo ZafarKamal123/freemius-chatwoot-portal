@@ -7,9 +7,15 @@ import {
 import './App.css'
 
 type RequestStatus = 'idle' | 'loading' | 'success' | 'error'
+type AuthStatus = 'checking' | 'authorized' | 'unauthorized'
 
 type PortalResponse = {
   link?: string
+  error?: string
+}
+
+type AuthResponse = {
+  authorized?: boolean
   error?: string
 }
 
@@ -115,7 +121,7 @@ function findEmail(value: unknown, depth = 0): string | null {
   return null
 }
 
-function getResponseMessage(response: PortalResponse | null) {
+function getResponseMessage(response: { error?: string } | null) {
   return response?.error ?? 'Could not create a customer portal link.'
 }
 
@@ -128,12 +134,16 @@ function App() {
   const [accessToken] = useState(() => readSearchParam(accessTokenParamNames))
   const [email, setEmail] = useState(() => readSearchParam(emailParamNames))
   const [productId, setProductId] = useState(readInitialProductId)
+  const [authStatus, setAuthStatus] = useState<AuthStatus>('checking')
+  const [authMessage, setAuthMessage] = useState('')
   const [status, setStatus] = useState<RequestStatus>('idle')
   const [message, setMessage] = useState('')
   const [portalUrl, setPortalUrl] = useState('')
 
   const normalizedEmail = email.trim()
+  const isAuthorized = authStatus === 'authorized'
   const canSubmit =
+    isAuthorized &&
     isValidEmail(normalizedEmail) &&
     isFreemiusProductId(productId) &&
     status !== 'loading'
@@ -141,6 +151,49 @@ function App() {
   useEffect(() => {
     if (accessToken) {
       removeAccessTokenFromUrl()
+    }
+  }, [accessToken])
+
+  useEffect(() => {
+    let isMounted = true
+
+    async function checkAuthorization() {
+      const headers: Record<string, string> = {}
+
+      if (accessToken) {
+        headers['X-Portal-Access-Token'] = accessToken
+      }
+
+      try {
+        const response = await fetch('/api/auth-status', { headers })
+        const data = (await response.json().catch(() => null)) as AuthResponse | null
+
+        if (!isMounted) {
+          return
+        }
+
+        if (!response.ok) {
+          setAuthStatus('unauthorized')
+          setAuthMessage(data?.error ?? 'This dashboard app is not authorized.')
+          return
+        }
+
+        setAuthStatus('authorized')
+        setAuthMessage('')
+      } catch {
+        if (!isMounted) {
+          return
+        }
+
+        setAuthStatus('unauthorized')
+        setAuthMessage('Could not verify dashboard access.')
+      }
+    }
+
+    checkAuthorization()
+
+    return () => {
+      isMounted = false
     }
   }, [accessToken])
 
@@ -161,6 +214,12 @@ function App() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
+
+    if (!isAuthorized) {
+      setStatus('error')
+      setMessage('This dashboard app is not authorized.')
+      return
+    }
 
     if (!isValidEmail(normalizedEmail)) {
       setStatus('error')
@@ -189,6 +248,13 @@ function App() {
       const data = (await response.json().catch(() => null)) as PortalResponse | null
 
       if (!response.ok) {
+        if (response.status === 401) {
+          setAuthStatus('unauthorized')
+          setAuthMessage(data?.error ?? 'This dashboard app is not authorized.')
+          setPortalUrl('')
+          return
+        }
+
         throw new Error(getResponseMessage(data))
       }
 
@@ -228,72 +294,97 @@ function App() {
           <h1 id="portal-title">Freemius customer portal</h1>
         </div>
 
-        <form className="portal-form" onSubmit={handleSubmit}>
-          <label htmlFor="customer-email">Customer email</label>
-          <input
-            id="customer-email"
-            type="email"
-            value={email}
-            placeholder="customer@example.com"
-            autoComplete="email"
-            autoFocus
-            aria-describedby="portal-status"
-            onChange={(event) => {
-              setEmail(event.target.value)
-              setPortalUrl('')
+        {authStatus === 'checking' ? (
+          <div className="lock-panel" role="status">
+            Verifying dashboard access...
+          </div>
+        ) : null}
 
-              if (status !== 'loading') {
-                setStatus('idle')
-                setMessage('')
-              }
-            }}
-          />
+        {authStatus === 'unauthorized' ? (
+          <div className="lock-panel error" role="alert">
+            <strong>Dashboard app locked</strong>
+            <span>
+              {authMessage ||
+                'Open this dashboard app from Chatwoot with a valid access token.'}
+            </span>
+          </div>
+        ) : null}
 
-          <label htmlFor="freemius-product">Product</label>
-          <select
-            id="freemius-product"
-            value={productId}
-            aria-describedby="portal-status"
-            onChange={(event) => {
-              const selectedProductId = event.target.value
+        {isAuthorized ? (
+          <>
+            <form className="portal-form" onSubmit={handleSubmit}>
+              <label htmlFor="customer-email">Customer email</label>
+              <input
+                id="customer-email"
+                type="email"
+                value={email}
+                placeholder="customer@example.com"
+                autoComplete="email"
+                autoFocus
+                aria-describedby="portal-status"
+                onChange={(event) => {
+                  setEmail(event.target.value)
+                  setPortalUrl('')
 
-              if (!isFreemiusProductId(selectedProductId)) {
-                return
-              }
+                  if (status !== 'loading') {
+                    setStatus('idle')
+                    setMessage('')
+                  }
+                }}
+              />
 
-              setProductId(selectedProductId)
-              setPortalUrl('')
+              <label htmlFor="freemius-product">Product</label>
+              <select
+                id="freemius-product"
+                value={productId}
+                aria-describedby="portal-status"
+                onChange={(event) => {
+                  const selectedProductId = event.target.value
 
-              if (status !== 'loading') {
-                setStatus('idle')
-                setMessage('')
-              }
-            }}
-          >
-            {freemiusProducts.map((product) => (
-              <option key={product.id} value={product.id}>
-                {product.name}
-              </option>
-            ))}
-          </select>
+                  if (!isFreemiusProductId(selectedProductId)) {
+                    return
+                  }
 
-          <button type="submit" disabled={!canSubmit}>
-            {status === 'loading' ? 'Opening...' : 'Open customer portal'}
-          </button>
-        </form>
+                  setProductId(selectedProductId)
+                  setPortalUrl('')
 
-        <div
-          id="portal-status"
-          className={`status-line ${status}`}
-          role={status === 'error' ? 'alert' : 'status'}
-        >
-          {message}
-        </div>
+                  if (status !== 'loading') {
+                    setStatus('idle')
+                    setMessage('')
+                  }
+                }}
+              >
+                {freemiusProducts.map((product) => (
+                  <option key={product.id} value={product.id}>
+                    {product.name}
+                  </option>
+                ))}
+              </select>
 
-        {portalUrl ? (
-          <a className="portal-link" href={portalUrl} target="_blank" rel="noreferrer">
-            Open portal link
-          </a>
+              <button type="submit" disabled={!canSubmit}>
+                {status === 'loading' ? 'Opening...' : 'Open customer portal'}
+              </button>
+            </form>
+
+            <div
+              id="portal-status"
+              className={`status-line ${status}`}
+              role={status === 'error' ? 'alert' : 'status'}
+            >
+              {message}
+            </div>
+
+            {portalUrl ? (
+              <a
+                className="portal-link"
+                href={portalUrl}
+                target="_blank"
+                rel="noreferrer"
+              >
+                Open portal link
+              </a>
+            ) : null}
+          </>
         ) : null}
       </section>
     </main>

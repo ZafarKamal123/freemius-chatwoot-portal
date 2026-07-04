@@ -51,6 +51,28 @@
   gap: 12px;
 }
 
+.lock-panel {
+  display: grid;
+  gap: 6px;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: var(--primary-soft);
+  font-size: 14px;
+}
+
+.lock-panel strong {
+  color: var(--ink);
+  font-size: 15px;
+}
+
+.lock-panel.error {
+  border-color: var(--danger-soft);
+  color: var(--danger);
+  background: var(--danger-bg);
+}
+
 .portal-form label {
   color: var(--ink);
   font-size: 14px;

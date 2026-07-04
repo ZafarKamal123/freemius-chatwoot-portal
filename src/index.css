@@ -11,6 +11,8 @@
   --primary-soft: #eef6ff;
   --focus-ring: rgba(39, 129, 246, 0.18);
   --danger: #dc2626;
+  --danger-bg: #fef2f2;
+  --danger-soft: #fecaca;
   --success: #15803d;
   --disabled: #f1f5f9;
   --font-sans:
